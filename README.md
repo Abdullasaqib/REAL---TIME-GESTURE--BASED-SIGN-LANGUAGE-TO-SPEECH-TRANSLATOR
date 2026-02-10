@@ -36,8 +36,8 @@ A powerful, real-time sign language detection system that translates hand gestur
 graph TD
     User[User] -->|Webcam Feed| Frontend[React Frontend]
     Frontend -->|Capture Image| API[FastAPI Backend]
-    API -->|Preprocess Image| Utils[Image Preprocessing (OpenCV)]
-    Utils -->|Normalized Data| Model[CNN Model (TensorFlow)]
+    API -->|Preprocess Image| Utils["Image Preprocessing (OpenCV)"]
+    Utils -->|Normalized Data| Model["CNN Model (TensorFlow)"]
     Model -->|Prediction Class| API
     API -->|JSON Response| Frontend
     Frontend -->|Display Result| User
