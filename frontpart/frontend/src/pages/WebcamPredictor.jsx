@@ -9,17 +9,45 @@ const WebcamPredictor = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
+  const canvasRef = useRef(null); // Hidden canvas for cropping
+
+  // Box dimensions
+  const BOX_SIZE = 250;
 
   const capture = useCallback(() => {
-    if (webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot();
+    if (webcamRef.current && webcamRef.current.video.readyState === 4) {
+      const video = webcamRef.current.video;
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
+
+      // Calculate center crop
+      const startX = (videoWidth - BOX_SIZE) / 2;
+      const startY = (videoHeight - BOX_SIZE) / 2;
+
+      // Draw to hidden canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = BOX_SIZE;
+      canvas.height = BOX_SIZE;
+      const ctx = canvas.getContext('2d');
+
+      // Draw only the cropped region
+      ctx.drawImage(
+        video,
+        startX, startY, BOX_SIZE, BOX_SIZE, // Source: x, y, w, h
+        0, 0, BOX_SIZE, BOX_SIZE          // Destination: x, y, w, h
+      );
+
+      const imageSrc = canvas.toDataURL('image/jpeg');
+
       if (imageSrc) {
         setImgSrc(imageSrc);
         setPrediction(null);
         setError(null);
       } else {
-        setError("Camera not ready. Please wait a moment.");
+        setError("Failed to capture image.");
       }
+    } else {
+      setError("Camera not ready. Please wait a moment.");
     }
   }, [webcamRef]);
 
@@ -56,7 +84,7 @@ const WebcamPredictor = () => {
       <div className="w-full max-w-4xl animate-fade-in">
         <div className="text-center mb-10">
           <h2 className="text-4xl font-bold text-gray-900 mb-2">Live Detection</h2>
-          <p className="text-gray-600">Capture a gesture to translate it instantly.</p>
+          <p className="text-gray-600">Place your hand in the green box and capture.</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 items-start">
@@ -72,15 +100,34 @@ const WebcamPredictor = () => {
                       <svg className="animate-spin w-8 h-8" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     </div>
                   )}
-                  <Webcam
-                    audio={false}
-                    ref={webcamRef}
-                    screenshotFormat="image/jpeg"
-                    className="w-full h-full object-cover"
-                    videoConstraints={{ facingMode: "user" }}
-                    onUserMedia={() => setIsCameraReady(true)}
-                    onUserMediaError={(err) => setError("Could not access camera: " + err.message)}
-                  />
+                  <div className="relative w-full h-full">
+                    <Webcam
+                      audio={false}
+                      ref={webcamRef}
+                      screenshotFormat="image/jpeg"
+                      className="w-full h-full object-cover"
+                      videoConstraints={{ facingMode: "user" }}
+                      onUserMedia={() => setIsCameraReady(true)}
+                      onUserMediaError={(err) => setError("Could not access camera: " + err.message)}
+                    />
+                    {/* ROI Box Overlay */}
+                    {isCameraReady && (
+                      <div
+                        className="absolute border-4 border-green-500 rounded-lg pointer-events-none z-20 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
+                        style={{
+                          width: `${BOX_SIZE}px`,
+                          height: `${BOX_SIZE}px`,
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      >
+                        <div className="absolute top-0 left-0 bg-green-500 text-white text-xs px-2 py-1 rounded-br-lg">
+                          Hand Here
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </div>
